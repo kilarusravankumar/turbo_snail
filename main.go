@@ -4,18 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	// "math"
 	"net"
+	"net/http"
+	"time"
 
+	"github.com/gorilla/mux"
 )
 
 const(
 	PORT = "7777"
+	HTTP_PORT = "7000"
 )
 
 func main() {
 	// recieve msgs from tcp connection 
-	turboSnailBroker := &Broker{}
+	
+	turboSnailBroker := CreateBroker() 
 
+	//start http server
+	go startHttpServer(turboSnailBroker)
 
 	// on each tcp message , look for the track 
 
@@ -27,7 +35,7 @@ func main() {
 
 	defer listener.Close()
 
-	fmt.Printf("server listening to %s", PORT)
+	fmt.Printf("server listening to %s\n", PORT)
 	var conn net.Conn
 	for{
 		conn, err = listener.Accept()	
@@ -45,7 +53,7 @@ func main() {
 
 type incomingMessage struct {
 	Priority int8 `json:"priority"`
-	Data []byte  `json:"data"`
+	Data interface{} `json:"data"`
 	TrackName string `json:"track"`
 }
 
@@ -65,6 +73,43 @@ func handleConnection(conn net.Conn, turboSnailBroker *Broker) {
 
 	// now turboSnailBroker.AppendMsg(trackName,data, priority)
 	turboSnailBroker.AppendMsg(_msg.TrackName, _msg.Data, _msg.Priority)
-	fmt.Printf("Track %s has %d messages",_msg.TrackName, turboSnailBroker.Tracks[_msg.TrackName].Len())
+	fmt.Printf("\n--> Track %s has %d messages\n",_msg.TrackName, turboSnailBroker.Tracks[_msg.TrackName].Len())
+	
+}
+
+type outMsg struct {
+	Priority int8 `json:"priority"`
+	Data interface{} `json:"data"`
+}
+
+func startHttpServer(turboSnailBroker *Broker) {
+	router := mux.NewRouter()
+
+	serveMsg := func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		trackName := vars["track"]
+		msg := turboSnailBroker.GetMessage(trackName)
+		fmt.Println(msg)
+		// retry := 1.0 
+		for msg == nil {
+			time.Sleep(time.Second * 1)
+			msg = turboSnailBroker.GetMessage(trackName)
+		}
+		
+		outGoingMsg := outMsg{Priority: msg.Priority, Data: msg.Data}
+
+		if err := json.NewEncoder(w).Encode(outGoingMsg); err != nil {
+		// Handle encoding errors
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+	}
+	router.HandleFunc("/{track}/message", serveMsg).Methods("GET")
+	if err := http.ListenAndServe(":"+HTTP_PORT, router) ; err != nil {
+		log.Fatalf("error occured while starting http server \n %s \n", err.Error())
+	}
+
+	fmt.Printf("Http server started on port: %s", HTTP_PORT)
 	
 }
