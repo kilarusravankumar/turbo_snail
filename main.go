@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"time"
-
+	"turbo_snail/broker"
 	"github.com/gorilla/mux"
 )
 
@@ -20,7 +20,7 @@ const(
 func main() {
 	// recieve msgs from tcp connection 
 	
-	turboSnailBroker := CreateBroker() 
+	turboSnailBroker := broker.CreateBroker() 
 
 	//start http server
 	go startHttpServer(turboSnailBroker)
@@ -57,7 +57,7 @@ type incomingMessage struct {
 	TrackName string `json:"track"`
 }
 
-func handleConnection(conn net.Conn, turboSnailBroker *Broker) {
+func handleConnection(conn net.Conn, turboSnailBroker *broker.Broker) {
 	defer conn.Close()
 	buf := make([]byte, 1024)
 
@@ -82,7 +82,7 @@ type outMsg struct {
 	Data interface{} `json:"data"`
 }
 
-func startHttpServer(turboSnailBroker *Broker) {
+func startHttpServer(turboSnailBroker *broker.Broker) {
 	router := mux.NewRouter()
 
 	serveMsg := func(w http.ResponseWriter, r *http.Request) {

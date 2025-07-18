@@ -3,7 +3,7 @@ package priority_queue
 
 import (
 	"container/heap"
-	"turbo_snail/broker/message"
+	"turbo_snail/message"
 )
 
 type MagicQueue []*message.Message

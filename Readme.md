@@ -38,3 +38,8 @@ For Now You can run the `main.go` file to see the priority queue in action:
 
 ```bash
 go run main.go 
+
+Or you can run using Docker
+
+```bash
+docker build -t turbo_snail . && docker run -p 7777:7777 -p 7000:7000 turbo_snail

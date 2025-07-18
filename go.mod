@@ -1,4 +1,4 @@
-module turbo_snail/broker
+module turbo_snail
 
 go 1.24.4
 

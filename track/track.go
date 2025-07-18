@@ -2,8 +2,8 @@ package track
 
 import (
 	"sync"
-	"turbo_snail/broker/priority_queue"
-	"turbo_snail/broker/message"
+	"turbo_snail/priority_queue"
+	"turbo_snail/message"
 	"container/heap"
 )
 

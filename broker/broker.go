@@ -1,10 +1,10 @@
-package main
+package broker
 
 import (
 	"sync"
 
-	"turbo_snail/broker/message"
-	"turbo_snail/broker/track"
+	"turbo_snail/message"
+	"turbo_snail/track"
 )
 
 type Broker struct{
