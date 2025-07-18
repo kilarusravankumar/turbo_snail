@@ -37,4 +37,4 @@ This project is currently in the early stages of development. The core in-memory
 For Now You can run the `main.go` file to see the priority queue in action:
 
 ```bash
-go run priority_broker_go
+go run main.go 
