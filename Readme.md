@@ -26,7 +26,6 @@ This project is currently in the early stages of development. The core in-memory
 
 ### TODO / Future Work
 
-
 * **Consumer Groups:** Add support for consumer groups to allow multiple consumers to work together to process messages from a single Track.
 
 * **Message Acknowledgement:** Implement an ACK/NACK mechanism for more robust message delivery guarantees.
