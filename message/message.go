@@ -1,25 +1,23 @@
 package message
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-
 type Message struct {
-	ID uuid.UUID
-	Data interface{} 
-	Timestamp int64 
-	Priority int8
+	ID        uuid.UUID
+	Data      map[string]interface{}
+	Timestamp int64
+	Priority  int8
 }
 
-
-func New(data interface{}, priority int8) *Message {
+func New(data map[string]interface{}, priority int8) *Message {
 	return &Message{
-		ID: uuid.New(),
-		Data: data,
+		ID:        uuid.New(),
+		Data:      data,
 		Timestamp: time.Now().Unix(),
-		Priority: priority, 
+		Priority:  priority,
 	}
 }
-
