@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"turbo_snail/broker"
+	"turbo_snail/config"
 	"turbo_snail/http"
 	"turbo_snail/restore"
 	"turbo_snail/tcp"
@@ -19,6 +20,7 @@ const (
 )
 
 func main() {
+	config.Init()
 	// recieve msgs from tcp connection
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -30,10 +32,10 @@ func main() {
 	var wg sync.WaitGroup
 	// start http server
 	wg.Add(1)
-	go http.StartServer(HTTP_PORT, &wg)
+	go http.StartServer(config.HTTP_PORT, &wg)
 	// on each tcp message , look for the track
 	wg.Add(1)
-	go tcp.Listen(TCP_PORT, turboSnailBroker, &wg)
+	go tcp.Listen(config.TCP_PORT, turboSnailBroker, &wg)
 
 	<-sigChan
 
