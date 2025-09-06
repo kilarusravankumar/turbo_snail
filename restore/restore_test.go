@@ -10,11 +10,16 @@ import (
 	"turbo_snail/broker"
 	"turbo_snail/message"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildTracks(t *testing.T) {
-
+	err := godotenv.Load("../.env")
+	if err != nil {
+		log.Fatalf("Error loading Environment variables. \n %s", err.Error())
+	}
+	wal_dir := os.Getenv("WAL_DIR")
 	t.Run("reading from the wal files", func(t *testing.T) {
 		testData := []message.Message{
 			{
@@ -36,9 +41,9 @@ func TestBuildTracks(t *testing.T) {
 
 		// create test.gob file and add sample data to the test.go
 		filePaths := []string{
-			"/home/kreten/code/turboSnail/wal/test.gob",
-			"/home/kreten/code/turboSnail/wal/test1.gob",
-			"/home/kreten/code/turboSnail/wal/test2.gob",
+			fmt.Sprintf("%s/test.go", wal_dir),
+			fmt.Sprintf("%s/test1.go", wal_dir),
+			fmt.Sprintf("%s/test2.go", wal_dir),
 		}
 		for _, filePath := range filePaths {
 			// Open the file with O_CREATE and O_EXCL flags.
@@ -69,7 +74,7 @@ func TestBuildTracks(t *testing.T) {
 		// test restore functionality
 		testBroker := broker.Get()
 
-		walFiles, err := os.ReadDir("wal")
+		walFiles, err := os.ReadDir(wal_dir)
 		if err != nil {
 			log.Fatalf("Error occured while reading Directory \"wal\" : %s", err.Error())
 		}

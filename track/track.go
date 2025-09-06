@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"turbo_snail/config"
 	"turbo_snail/log_entry"
 	"turbo_snail/message"
 	"turbo_snail/priority_queue"
@@ -26,11 +27,11 @@ func New(trackName string) *Track {
 	var err error
 
 	// Ensure the WAL directory exists
-	if err := os.MkdirAll("wal", 0755); err != nil {
-		log.Fatalf("Failed to create WAL directory: %v", err)
+	if err := os.MkdirAll(config.WAL_DIR, 0755); err != nil {
+		log.Printf("Ensuring %s , directory exists for writing Write ahead logs: %v", config.WAL_DIR, err)
 	}
 
-	t.wal, err = os.Create(fmt.Sprintf("wal/%s.log", trackName))
+	t.wal, err = os.Create(fmt.Sprintf("%s/%s.log", config.WAL_DIR, trackName))
 	if err != nil {
 		log.Fatalf("Failed to create WAL file for track %s: %v", trackName, err)
 	}
