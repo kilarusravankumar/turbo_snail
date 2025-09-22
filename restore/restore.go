@@ -44,9 +44,7 @@ func buildTracks(turboSnailBroker *broker.Broker, walFiles []os.DirEntry, walDir
 					log.Fatalf("Error occured while decoding logs from %s file.\n %s", fullFileName, err.Error())
 				}
 
-				if !entry.IsDeleted() {
-					turboSnailBroker.AppendMsg(getActualTrackName(walFile.Name()), entry.Message)
-				}
+				turboSnailBroker.AppendMsg(getActualTrackName(walFile.Name()), entry.Message)
 			}
 
 			// read loggedBytes , parse each gob message and also ignore the deleted messages , remove them from in memory queue

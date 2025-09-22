@@ -7,18 +7,22 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 	"turbo_snail/config"
 	"turbo_snail/log_entry"
 	"turbo_snail/message"
 	"turbo_snail/priority_queue"
+
+	"github.com/google/uuid"
 )
 
 type Track struct {
-	Name       string
-	queue      *priority_queue.MagicQueue
-	wal        *os.File
-	WalEncoder *gob.Encoder
-	mu         sync.Mutex
+	Name             string
+	queue            *priority_queue.MagicQueue
+	wal              *os.File
+	WalEncoder       *gob.Encoder
+	mu               sync.Mutex
+	InFlightMessages map[uuid.UUID]*message.InFlightMessage
 }
 
 func New(trackName string) *Track {
@@ -37,6 +41,8 @@ func New(trackName string) *Track {
 	}
 	t.WalEncoder = gob.NewEncoder(t.wal)
 	t.queue = priority_queue.New()
+	t.InFlightMessages = make(map[uuid.UUID]*message.InFlightMessage, 0)
+	go t.RequeueExpiredMessages()
 	return t
 }
 
@@ -66,17 +72,7 @@ func (t *Track) PopMessage() *message.Message {
 		return nil
 	}
 	msg := heap.Pop(t.queue).(*message.Message)
-	deleteEntry := log_entry.NewMsg(msg)
 
-	if err := t.WalEncoder.Encode(deleteEntry); err != nil {
-		log.Fatalf("Error occured while appending delete log the wal file.\n %s", err.Error())
-		return nil
-	}
-
-	if err := t.wal.Sync(); err != nil {
-		log.Fatalf("Error occured while appending delete log the wal file.\n %s", err.Error())
-		return nil
-	}
 	return msg
 }
 
@@ -86,4 +82,21 @@ func (t *Track) IsEmpty() bool {
 
 func (t *Track) Len() int {
 	return t.queue.Len()
+}
+
+func (t *Track) RequeueExpiredMessages() {
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+	for range ticker.C {
+		for _uuid, inFlightMsg := range t.InFlightMessages {
+			if time.Now().After(inFlightMsg.ExpiresAt) {
+				err := t.AddMessage(inFlightMsg.Message)
+				if err != nil {
+					log.Default().Fatalf("Error occured while requeuing the expired Message \n %s", err.Error())
+				}
+				delete(t.InFlightMessages, _uuid)
+			}
+		}
+	}
+
 }

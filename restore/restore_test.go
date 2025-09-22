@@ -8,18 +8,15 @@ import (
 	"testing"
 	"time"
 	"turbo_snail/broker"
+	"turbo_snail/config"
 	"turbo_snail/message"
 
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildTracks(t *testing.T) {
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatalf("Error loading Environment variables. \n %s", err.Error())
-	}
-	wal_dir := os.Getenv("WAL_DIR")
+	config.Init()
+	wal_dir := "/home/kreten/wal_logs"
 	t.Run("reading from the wal files", func(t *testing.T) {
 		testData := []message.Message{
 			{
@@ -79,7 +76,7 @@ func TestBuildTracks(t *testing.T) {
 			log.Fatalf("Error occured while reading Directory \"wal\" : %s", err.Error())
 		}
 
-		buildTracks(testBroker, walFiles)
+		buildTracks(testBroker, walFiles, wal_dir)
 
 		allTrackNames := testBroker.GetAllTrackNames()
 

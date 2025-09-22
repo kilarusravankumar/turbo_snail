@@ -48,6 +48,10 @@ func (b *Broker) GetMessage(trackName string) *message.Message {
 	b.rwMutex.RLock()
 	defer b.rwMutex.RUnlock()
 	if raceTrack, exists := b.Tracks[trackName]; exists {
+		/*
+			before returning pop'd msg , store it in memory as pittedMsg and then after certain timeout
+			reintroduce the message back to the priority Queue.
+		*/
 		return raceTrack.PopMessage()
 	}
 	return nil

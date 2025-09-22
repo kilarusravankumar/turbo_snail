@@ -1,6 +1,5 @@
 package priority_queue
 
-
 import (
 	"container/heap"
 	"turbo_snail/message"
@@ -8,23 +7,20 @@ import (
 
 type MagicQueue []*message.Message
 
-
 func (q MagicQueue) Len() int {
 	return len(q)
 }
 
-
 func (q MagicQueue) Swap(i, j int) {
-	q[i] , q[j] = q[j], q[i]
+	q[i], q[j] = q[j], q[i]
 }
 
-func (q MagicQueue) Less(i,j int) bool {
+func (q MagicQueue) Less(i, j int) bool {
 	if q[i].Priority != q[j].Priority {
 		return q[i].Priority > q[j].Priority
 	}
 	return q[i].Timestamp > q[j].Timestamp
 }
-
 
 func (q *MagicQueue) Push(x any) {
 	msg := x.(*message.Message)
@@ -34,10 +30,15 @@ func (q *MagicQueue) Push(x any) {
 func (q *MagicQueue) Pop() any {
 	oldQ := *q
 	oldQ_len := len(oldQ)
-	top := oldQ[oldQ_len - 1]
-	oldQ = oldQ[:oldQ_len - 1]
+	top := oldQ[oldQ_len-1]
+	oldQ = oldQ[:oldQ_len-1]
 	*q = oldQ
 	return top
+}
+
+func (q *MagicQueue) Peek() any {
+	que := *q
+	return que[len(que)-1]
 }
 
 func New() *MagicQueue {
