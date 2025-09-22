@@ -1,0 +1,8 @@
+services:
+  turbosnail:
+    build: .
+    ports:
+      - "${START_LINE_PORT}:${START_LINE_PORT}"
+      - "${FINISH_LINE_PORT}:${FINISH_LINE_PORT}"
+    volumes:
+      - ${WAL_DIR}:/data/turboSnail/wal_logs
