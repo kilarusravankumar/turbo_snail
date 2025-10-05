@@ -38,5 +38,4 @@ func main() {
 	go tcp.Listen(config.TCP_PORT, turboSnailBroker, &wg)
 
 	<-sigChan
-
 }

@@ -3,11 +3,13 @@ package track
 import (
 	"container/heap"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
+
 	"turbo_snail/log_entry"
 	"turbo_snail/message"
 	"turbo_snail/priority_queue"
@@ -100,4 +102,29 @@ func (t *Track) RequeueExpiredMessages() {
 		t.mu.Unlock()
 	}
 
+}
+
+func (t *Track) ACKMessage(msgID uuid.UUID) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if _, ok := t.InFlightMessages[msgID]; !ok {
+		return errors.New("uuid provided is not in inflight messages; msg is either requeued or msg id is invalid.")
+	}
+
+	delete(t.InFlightMessages, msgID)
+
+	return nil
+}
+
+func (t *Track) NACKMessage(msgID uuid.UUID) error {
+	t.mu.Lock()	
+	defer t.mu.Unlock()
+	inflightMsg , ok := t.InFlightMessages[msgID]
+	if !ok {
+		return fmt.Errorf("msg not found for the msg Id : %s", msgID)
+	}
+	t.AddMessage(inflightMsg.Message)
+	delete(t.InFlightMessages, msgID)
+
+	return nil
 }

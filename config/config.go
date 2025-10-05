@@ -1,3 +1,6 @@
+/*
+Package config, has all configuration :)
+*/
 package config
 
 import (
@@ -15,7 +18,6 @@ var (
 )
 
 func Init() {
-
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Printf("Error occured while loading Environment Variables \n %s", err.Error())
@@ -33,7 +35,6 @@ func Init() {
 		WAL_DIR = val
 	}
 	log.Printf("Write ahead logs directory is set to : %s \n", WAL_DIR)
-
 }
 
 func isEnvVarPresent(str string) (string, bool) {
