@@ -3,12 +3,13 @@ package track
 import (
 	"container/heap"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
-	"turbo_snail/config"
+
 	"turbo_snail/log_entry"
 	"turbo_snail/message"
 	"turbo_snail/priority_queue"
@@ -25,17 +26,17 @@ type Track struct {
 	InFlightMessages map[uuid.UUID]*message.InFlightMessage
 }
 
-func New(trackName string) *Track {
+func New(trackName, walDir string) *Track {
 	t := &Track{}
 	t.Name = trackName
 	var err error
 
 	// Ensure the WAL directory exists
-	if err := os.MkdirAll(config.WAL_DIR, 0755); err != nil {
-		log.Printf("Ensuring %s , directory exists for writing Write ahead logs: %v", config.WAL_DIR, err)
+	if err := os.MkdirAll(walDir, 0755); err != nil {
+		log.Printf("Ensuring %s , directory exists for writing Write ahead logs: %v", walDir, err)
 	}
 
-	t.wal, err = os.Create(fmt.Sprintf("%s/%s.log", config.WAL_DIR, trackName))
+	t.wal, err = os.Create(fmt.Sprintf("%s/%s.log", walDir, trackName))
 	if err != nil {
 		log.Fatalf("Failed to create WAL file for track %s: %v", trackName, err)
 	}
@@ -72,7 +73,7 @@ func (t *Track) PopMessage() *message.Message {
 		return nil
 	}
 	msg := heap.Pop(t.queue).(*message.Message)
-
+	t.InFlightMessages[msg.ID] = &message.InFlightMessage{Message: msg, ExpiresAt: time.Now().Add(30 * time.Minute)}
 	return msg
 }
 
@@ -88,6 +89,7 @@ func (t *Track) RequeueExpiredMessages() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 	for range ticker.C {
+		t.mu.Lock()
 		for _uuid, inFlightMsg := range t.InFlightMessages {
 			if time.Now().After(inFlightMsg.ExpiresAt) {
 				err := t.AddMessage(inFlightMsg.Message)
@@ -97,6 +99,32 @@ func (t *Track) RequeueExpiredMessages() {
 				delete(t.InFlightMessages, _uuid)
 			}
 		}
+		t.mu.Unlock()
 	}
 
+}
+
+func (t *Track) ACKMessage(msgID uuid.UUID) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if _, ok := t.InFlightMessages[msgID]; !ok {
+		return errors.New("uuid provided is not in inflight messages; msg is either requeued or msg id is invalid.")
+	}
+
+	delete(t.InFlightMessages, msgID)
+
+	return nil
+}
+
+func (t *Track) NACKMessage(msgID uuid.UUID) error {
+	t.mu.Lock()	
+	defer t.mu.Unlock()
+	inflightMsg , ok := t.InFlightMessages[msgID]
+	if !ok {
+		return fmt.Errorf("msg not found for the msg Id : %s", msgID)
+	}
+	t.AddMessage(inflightMsg.Message)
+	delete(t.InFlightMessages, msgID)
+
+	return nil
 }

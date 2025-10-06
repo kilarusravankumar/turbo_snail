@@ -8,14 +8,12 @@ import (
 	"testing"
 	"time"
 	"turbo_snail/broker"
-	"turbo_snail/config"
 	"turbo_snail/message"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildTracks(t *testing.T) {
-	config.Init()
 	wal_dir := "/home/kreten/wal_logs"
 	t.Run("reading from the wal files", func(t *testing.T) {
 		testData := []message.Message{

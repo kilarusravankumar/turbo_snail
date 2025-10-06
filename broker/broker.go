@@ -2,6 +2,8 @@ package broker
 
 import (
 	"sync"
+
+	"turbo_snail/config"
 	"turbo_snail/message"
 	"turbo_snail/track"
 )
@@ -36,7 +38,7 @@ func (b *Broker) AppendMsg(trackName string, msg *message.Message) {
 
 	if raceTrack == nil {
 		b.rwMutex.Lock()
-		raceTrack = track.New(trackName)
+		raceTrack = track.New(trackName, config.WAL_DIR)
 		b.Tracks[trackName] = raceTrack
 		b.rwMutex.Unlock()
 
