@@ -3,6 +3,7 @@ package track
 import (
 	"testing"
 	"time"
+
 	"turbo_snail/message"
 
 	"github.com/stretchr/testify/assert"
@@ -10,7 +11,7 @@ import (
 
 func TestInFlightMessagesGeneration(t *testing.T) {
 	testTrack := New("TestingTrack", "/home/kreten/wal_logs")
-	testDataSlice := []map[string]interface{}{
+	testDataSlice := []map[string]any{
 		{"dog": "bruno", "cat": "tommy", "mouse": "jerry"},
 		{"duckName1": "ralph", "duckName2": "not Raplh", "duckName": "ralph's cousin"},
 	}
@@ -27,5 +28,4 @@ func TestInFlightMessagesGeneration(t *testing.T) {
 		msg := testTrack.PopMessage()
 		assert.Equal(t, expectedInflightMsgs[i].Message, testTrack.InFlightMessages[msg.ID].Message, "both messages should match.")
 	}
-
 }
