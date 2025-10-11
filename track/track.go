@@ -24,6 +24,8 @@ type Track struct {
 	WalEncoder       *gob.Encoder
 	mu               sync.Mutex
 	InFlightMessages map[uuid.UUID]*message.InFlightMessage
+	AckLog           *os.File
+	AckEncoder       *gob.Encoder
 }
 
 func New(trackName, walDir string) *Track {
@@ -32,7 +34,7 @@ func New(trackName, walDir string) *Track {
 	var err error
 
 	// Ensure the WAL directory exists
-	if err := os.MkdirAll(walDir, 0755); err != nil {
+	if err := os.MkdirAll(walDir, 0o755); err != nil {
 		log.Printf("Ensuring %s , directory exists for writing Write ahead logs: %v", walDir, err)
 	}
 
@@ -40,7 +42,13 @@ func New(trackName, walDir string) *Track {
 	if err != nil {
 		log.Fatalf("Failed to create WAL file for track %s: %v", trackName, err)
 	}
+
+	t.AckLog, err = os.Create(fmt.Sprintf("%s/%s.ack.log", walDir, trackName))
+	if err != nil {
+		log.Fatalf("Failed to create ACK log file, which will create persistent and replay issues after ACK; \n %s", err.Error())
+	}
 	t.WalEncoder = gob.NewEncoder(t.wal)
+	t.AckEncoder = gob.NewEncoder(t.AckLog)
 	t.queue = priority_queue.New()
 	t.InFlightMessages = make(map[uuid.UUID]*message.InFlightMessage, 0)
 	go t.RequeueExpiredMessages()
@@ -101,30 +109,34 @@ func (t *Track) RequeueExpiredMessages() {
 		}
 		t.mu.Unlock()
 	}
-
 }
 
 func (t *Track) ACKMessage(msgID uuid.UUID) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if _, ok := t.InFlightMessages[msgID]; !ok {
-		return errors.New("uuid provided is not in inflight messages; msg is either requeued or msg id is invalid.")
+		return errors.New("uuid provided is not in inflight messages; msg is either requeued or msg id is invalid")
+	}
+	entry := log_entry.NewACKLogMsg(msgID)
+	if err := t.AckEncoder.Encode(entry); err != nil {
+		return fmt.Errorf("failed to encode log entry to ACK for track %s: %w", t.Name, err)
 	}
 
+	if err := t.AckLog.Sync(); err != nil {
+		return fmt.Errorf("failed to sync ACK Log to disk for track %s: %w", t.Name, err)
+	}
 	delete(t.InFlightMessages, msgID)
-
 	return nil
 }
 
 func (t *Track) NACKMessage(msgID uuid.UUID) error {
-	t.mu.Lock()	
+	t.mu.Lock()
 	defer t.mu.Unlock()
-	inflightMsg , ok := t.InFlightMessages[msgID]
+	inflightMsg, ok := t.InFlightMessages[msgID]
 	if !ok {
 		return fmt.Errorf("msg not found for the msg Id : %s", msgID)
 	}
 	t.AddMessage(inflightMsg.Message)
 	delete(t.InFlightMessages, msgID)
-
 	return nil
 }

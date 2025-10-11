@@ -10,6 +10,8 @@ import (
 	"turbo_snail/broker"
 	"turbo_snail/config"
 	"turbo_snail/log_entry"
+
+	"github.com/google/uuid"
 )
 
 func Init(turboSnailBroker *broker.Broker) error {
@@ -25,7 +27,8 @@ func Init(turboSnailBroker *broker.Broker) error {
 func buildTracks(turboSnailBroker *broker.Broker, walFiles []os.DirEntry, walDir string) error {
 	var err error
 	for _, walFile := range walFiles {
-
+		trackName := getActualTrackName(walFile.Name())
+		ackMsgMap := GetAckLogMap(walDir, trackName)
 		fullFileName := fmt.Sprintf("%s/%s", walDir, walFile.Name())
 		if !walFile.IsDir() && strings.Contains(fullFileName, ".log") {
 			file, err := os.Open(fullFileName)
@@ -43,17 +46,40 @@ func buildTracks(turboSnailBroker *broker.Broker, walFiles []os.DirEntry, walDir
 				if err != nil {
 					log.Fatalf("Error occured while decoding logs from %s file.\n %s", fullFileName, err.Error())
 				}
-
-				turboSnailBroker.AppendMsg(getActualTrackName(walFile.Name()), entry.Message)
+				if !ackMsgMap[entry.Message.ID] {
+					turboSnailBroker.AppendMsg(trackName, entry.Message)
+				}
 			}
-
-			// read loggedBytes , parse each gob message and also ignore the deleted messages , remove them from in memory queue
-			// 1st parse all the messages from the wal file
 
 		}
 	}
 
 	return err
+}
+
+func GetAckLogMap(walDir string, trackName string) map[uuid.UUID]bool {
+	ackLogMap := make(map[uuid.UUID]bool, 0)
+	ackLogFileName := fmt.Sprintf("%s.ack.log", trackName)
+	ackLogFullFileName := fmt.Sprintf("%s/%s", walDir, ackLogFileName)
+	file, err := os.Open(ackLogFullFileName)
+	if err != nil {
+		log.Fatalf("Error occured while trying to read ACK Log file %s \n", ackLogFullFileName)
+	}
+
+	decoder := gob.NewDecoder(file)
+	for {
+		entry := log_entry.ACKLogEntry{}
+		err := decoder.Decode(&entry)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Error occured while decoding the ACK Log file. \n %s", err.Error())
+		}
+		ackLogMap[entry.MsgID] = true
+	}
+
+	return ackLogMap
 }
 
 func getActualTrackName(fullFileName string) string {

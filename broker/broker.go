@@ -2,8 +2,6 @@ package broker
 
 import (
 	"sync"
-
-	"turbo_snail/config"
 	"turbo_snail/message"
 	"turbo_snail/track"
 )
@@ -11,6 +9,7 @@ import (
 type Broker struct {
 	Tracks  map[string]*track.Track
 	rwMutex sync.RWMutex
+	WALDir  string
 }
 
 var (
@@ -28,6 +27,10 @@ func Get() *Broker {
 	return turboSnailBroker
 }
 
+func (b *Broker) SetWalDir(walDir string) {
+	b.WALDir = walDir
+}
+
 func (b *Broker) AppendMsg(trackName string, msg *message.Message) {
 	var raceTrack *track.Track
 	b.rwMutex.RLock()
@@ -38,7 +41,7 @@ func (b *Broker) AppendMsg(trackName string, msg *message.Message) {
 
 	if raceTrack == nil {
 		b.rwMutex.Lock()
-		raceTrack = track.New(trackName, config.WAL_DIR)
+		raceTrack = track.New(trackName, b.WALDir)
 		b.Tracks[trackName] = raceTrack
 		b.rwMutex.Unlock()
 
