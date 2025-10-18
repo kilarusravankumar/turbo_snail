@@ -2,6 +2,7 @@ package broker
 
 import (
 	"sync"
+	"turbo_snail/config"
 	"turbo_snail/message"
 	"turbo_snail/track"
 )
@@ -22,6 +23,7 @@ func Get() *Broker {
 		turboSnailBroker = &Broker{
 			Tracks:  map[string]*track.Track{},
 			rwMutex: sync.RWMutex{},
+			WALDir:  config.WAL_DIR,
 		}
 	})
 	return turboSnailBroker

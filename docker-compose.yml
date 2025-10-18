@@ -2,7 +2,7 @@ services:
   turbosnail:
     build: .
     ports:
-      - "${START_LINE_PORT}:${START_LINE_PORT}"
-      - "${FINISH_LINE_PORT}:${FINISH_LINE_PORT}"
+      - 7777:7777
+      - 7000:7000
     volumes:
-      - ${WAL_DIR}:/data/turboSnail/wal_logs
+      - ./wal_logs:/data/turboSnail/wal_logs
