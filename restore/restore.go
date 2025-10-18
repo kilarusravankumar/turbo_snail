@@ -26,7 +26,12 @@ func Init(turboSnailBroker *broker.Broker) error {
 
 func buildTracks(turboSnailBroker *broker.Broker, walFiles []os.DirEntry, walDir string) error {
 	var err error
+
 	for _, walFile := range walFiles {
+
+		if walFile.IsDir() {
+			continue
+		}
 		trackName := getActualTrackName(walFile.Name())
 		ackMsgMap := GetAckLogMap(walDir, trackName)
 		fullFileName := fmt.Sprintf("%s/%s", walDir, walFile.Name())
@@ -61,9 +66,12 @@ func GetAckLogMap(walDir string, trackName string) map[uuid.UUID]bool {
 	ackLogMap := make(map[uuid.UUID]bool, 0)
 	ackLogFileName := fmt.Sprintf("%s.ack.log", trackName)
 	ackLogFullFileName := fmt.Sprintf("%s/%s", walDir, ackLogFileName)
+
 	file, err := os.Open(ackLogFullFileName)
 	if err != nil {
-		log.Fatalf("Error occured while trying to read ACK Log file %s \n", ackLogFullFileName)
+		log.Printf("Couldn't open the ACK log file %s for track: %s", ackLogFullFileName, trackName)
+		log.Printf("err : %s", err.Error())
+		return ackLogMap
 	}
 
 	decoder := gob.NewDecoder(file)
@@ -84,5 +92,6 @@ func GetAckLogMap(walDir string, trackName string) map[uuid.UUID]bool {
 
 func getActualTrackName(fullFileName string) string {
 	index := strings.LastIndex(fullFileName, ".log")
+	log.Printf("fullFileName : %s", fullFileName)
 	return fullFileName[:index]
 }

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
-
 	"turbo_snail/log_entry"
 	"turbo_snail/message"
 	"turbo_snail/priority_queue"
@@ -43,7 +43,14 @@ func New(trackName, walDir string) *Track {
 		log.Fatalf("Failed to create WAL file for track %s: %v", trackName, err)
 	}
 
-	t.AckLog, err = os.Create(fmt.Sprintf("%s/%s.ack.log", walDir, trackName))
+	ackFullFilePath := fmt.Sprintf("%s/ack/%s.ack.log", walDir, trackName)
+	ackDirpath := filepath.Dir(ackFullFilePath)
+	err = os.MkdirAll(ackDirpath, os.ModePerm)
+	if err != nil {
+		log.Printf("Failed to create ack directory in %s \n", ackDirpath)
+	}
+
+	t.AckLog, err = os.Create(ackFullFilePath)
 	if err != nil {
 		log.Fatalf("Failed to create ACK log file, which will create persistent and replay issues after ACK; \n %s", err.Error())
 	}
@@ -51,7 +58,10 @@ func New(trackName, walDir string) *Track {
 	t.AckEncoder = gob.NewEncoder(t.AckLog)
 	t.queue = priority_queue.New()
 	t.InFlightMessages = make(map[uuid.UUID]*message.InFlightMessage, 0)
+
+	// requeuing expired messages
 	go t.RequeueExpiredMessages()
+
 	return t
 }
 
