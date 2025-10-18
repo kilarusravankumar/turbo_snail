@@ -1,5 +1,3 @@
-# 🚧 Work in Progress 🚧
-
 # TurboSnail
 
 ## About The Project
@@ -20,6 +18,10 @@ This project is designed to be a simple, embeddable, and efficient solution for 
 
 * **Dynamic Track Creation:** Tracks( same concept as topics) are created on-the-fly when a message is first produced to them.
 
+* **Message Acknowledgement:** Provides an ACK/NACK mechanism for more robust message delivery guarantees.
+
+* **Network Protocol:** Exposes the broker over both TCP (for producing) and HTTP (for consuming and acknowledging).
+
 ## Current Status & Limitations
 
 This project is currently in the early stages of development. The core in-memory broker logic is functional and tested.
@@ -28,30 +30,63 @@ This project is currently in the early stages of development. The core in-memory
 
 * **Consumer Groups:** Add support for consumer groups to allow multiple consumers to work together to process messages from a single Track.
 
-* **Message Acknowledgement:** Implement an ACK/NACK mechanism for more robust message delivery guarantees.
+## API
 
-* **Network Protocol:** Expose the broker over a network (e.g., TCP or gRPC) so it can run as a standalone service.
+TurboSnail exposes both TCP and HTTP interfaces for message interaction.
+
+### TCP Interface
+
+- **Port:** The TCP server runs on the `START_LINE_PORT` (default: `7777`).
+- **Functionality:** This interface is used for producing messages to a Track. To send a message, you can establish a TCP connection and send the message payload.
+
+### HTTP Interface
+
+- **Port:** The HTTP server runs on the `FINISH_LINE_PORT` (default: `7000`).
+- **Functionality:** This interface is used for consuming messages from a Track and managing their lifecycle.
+
+#### Endpoints
+
+- **`GET /{track}/message`**
+  - **Description:** Retrieves a message from the specified Track. This endpoint uses long polling and will wait until a message is available.
+  - **Example:**
+    ```bash
+    curl http://localhost:7000/my-track/message
+    ```
+
+- **`POST /{track}/message/{msgId}/ack`**
+  - **Description:** Acknowledges a message, confirming that it has been successfully processed.
+  - **Example:**
+    ```bash
+    curl -X POST http://localhost:7000/my-track/message/your-message-id/ack
+    ```
+
+- **`POST /{track}/message/{msgId}/nack`**
+  - **Description:** Negatively acknowledges a message, indicating that it could not be processed. The message will be requeued and delivered again.
+  - **Example:**
+    ```bash
+    curl -X POST http://localhost:7000/my-track/message/your-message-id/nack
+    ```
 
 ## Environment Variables
 Create .env file in the project root.
 ```bash
 WAL_DIR=/your/directory/for/WAL/Logs
-# START_LINE_PORT is TCP port, TurboSnail listens to the START_LINE_PORT
+# START_LINE_PORT is the TCP port TurboSnail listens to for incoming messages.
 START_LINE_PORT=7777
-# FINISH_LINE_PORT is HTTP port, Msg recieving application can long poll to TurboSnail Broker. 
+# FINISH_LINE_PORT is the HTTP port for consuming messages and sending acknowledgements.
 FINISH_LINE_PORT=7000
 ```
 
 
 ## How To Run
 
-For Now You can run the `main.go` file to see the priority queue in action:
+You can run the `main.go` file to start the TurboSnail broker:
 
 ```bash
 go run main.go 
 ```
 
-Or you can run using Docker compose after creating .env, you can run below command.
+Alternatively, you can use Docker Compose after creating a `.env` file:
 
 ```bash
 docker compose up -d
